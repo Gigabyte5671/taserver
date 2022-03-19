@@ -557,9 +557,11 @@ _hierarchical_definitions_goty = {
                     'Pathfinder_Primary_LightSpinfusor_100X': 8696,
                     'Pathfinder_Primary_LightTwinfusor': 8245,
                     'Pathfinder_Primary_LightSpinfusor_MKD': 8415,
+                    'Light_Primary_LightGrenadeLauncher': 8761,
                 },
                 'secondary': {
                     'Pathfinder_Secondary_LightAssaultRifle': 7438,
+                    'Light_Sidearm_Sparrow': 7433,
                     'Pathfinder_Secondary_Shotgun': 7399,
                     'Pathfinder_Secondary_Shotgun_MKD': 8411,
                     'All_H1_Shocklance': 7435,
@@ -629,6 +631,7 @@ _hierarchical_definitions_goty = {
                     'Infiltrator_Secondary_SN7': 7418,
                     'Infiltrator_Secondary_SN7_MKD': 8404,
                     'Infiltrator_Secondary_ThrowingKnives': 8256,
+                    'Light_Sidearm_Sparrow': 7433,
                     'All_H1_Shocklance': 7435,
                 },
                 'dummy': {
@@ -700,6 +703,7 @@ _hierarchical_definitions_goty = {
                     'Raider_Secondary_NJ4SMG': 7441,
                     'Raider_Secondary_NJ4SMG_MKD': 8408,
                     'Raider_Secondary_NJ5SMG': 8249,
+                    'Soldier_Secondary_Eagle': 7388,
                     'All_H1_Shocklance': 7435,
                 },
                 'dummy': {
@@ -728,14 +732,14 @@ _hierarchical_definitions_goty = {
                     'Technician_Primary_Thumper': 7461,
                     'Technician_Primary_TCN4': 7443,
                     'Technician_Primary_TCN4_MKD': 8410,
-                    # 'Technician_Primary_TC24': 8699,  # Repurposed as Flak Cannon
+                    'Technician_Primary_TC24': 8699,  # Repurposed as Flak Cannon
                 },
                 'secondary': {
                     'Technician_Secondary_RepairToolSD': 7436,
                     # 'Technician_Secondary_RepairToolSD_MKD': 8405,  # Disabled, used as a placeholder tertiary
                     'Technician_Secondary_SawedOff': 7427,
-                    'Light_Sidearm_Sparrow': 7433,
-                    # 'Medium_ElfProjector': 8765, # OOTB only
+                    'Soldier_Secondary_Eagle': 7388,
+                    'Medium_ElfProjector': 8765, # OOTB only
                     'All_H1_Shocklance': 7435,
                 },
                 'dummy': {
@@ -749,7 +753,7 @@ _hierarchical_definitions_goty = {
                 'Technician_Belt_RepairKit': 8698,
             },
             'packs': {
-                # 'Sentinel_Pack_DropJammer': 7456,  # Repurposed as lunchbox
+                'Sentinel_Pack_DropJammer': 7456,  # Repurposed as lunchbox
                 'Technician_Pack_LightTurret': 7413,
                 'Technician_Pack_EXRTurret': 7417,
             },
@@ -770,6 +774,7 @@ _hierarchical_definitions_goty = {
                     'Juggernaut_Secondary_SpinfusorD_MKD': 8413,
                     'Juggernaut_Secondary_HeavyTwinfusor': 8656,
                     'Juggernaut_Secondary_X1LMG': 7458,
+                    'Brute_Secondary_NovaColt': 7431,
                     'All_H1_Shocklance': 7435,
                 },
                 'dummy': {
@@ -783,7 +788,7 @@ _hierarchical_definitions_goty = {
             },
             'packs': {
                 'Juggernaut_Pack_HealthRegen': 7831,
-                # 'Juggernaut_Pack_Energy': 7901,
+                'Juggernaut_Pack_Energy': 7901,
             },
             'skins': {
                 'Skin JUG': 8331,
@@ -795,6 +800,7 @@ _hierarchical_definitions_goty = {
                 'primary': {
                     'Doombringer_Primary_ChainGun': 7386,
                     'Doombringer_Primary_ChainGun_MKD': 8392,
+                    'Brute_Secondary_NovaColt': 7431,
                     'Doombringer_Primary_HeavyBoltLauncher': 7452,
                 },
                 'secondary': {
@@ -830,7 +836,7 @@ _hierarchical_definitions_goty = {
                     'Brute_Secondary_AutoShotgun_MKD': 8412,
                     'Brute_Secondary_NovaColt': 7431,
                     'Brute_Secondary_PlasmaCannon': 8250,
-                    # 'Elf_FlakCannon': 8766,
+                    'Elf_FlakCannon': 8766,
                     'All_H1_Shocklance': 7435,
                 },
                 'dummy': {
