@@ -18,14 +18,11 @@
 # along with taserver.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import ctypes.wintypes
 import gevent
-import gevent.subprocess as sp
 import logging
 import os
 import time
 
-from .inject import inject
 from common.errors import FatalError
 from common.geventwrapper import gevent_spawn
 
@@ -62,7 +59,7 @@ class GameServerTerminatedMessage:
 
 class GameServerHandler:
 
-    def __init__(self, game_server_config, ports, server_handler_queue, launcher_queue, data_root):
+    def __init__(self, game_server_config, shared_config, ports, server_handler_queue, launcher_queue, data_root):
         gevent.getcurrent().name = 'gameserver'
 
         self.servers = {}
@@ -78,6 +75,10 @@ class GameServerHandler:
             self.working_dir = game_server_config['dir']
             self.dll_to_inject = game_server_config['controller_dll']
             self.dll_config_path = os.path.join(data_root, game_server_config['controller_config'])
+            self.platform = 'windows' if os.name == 'nt' else 'linux'
+            self.logger.info(f"Detected platform as {self.platform}")
+            if self.platform == 'linux':
+                self.injector_exe = game_server_config['injector_exe']
         except KeyError as e:
             raise ConfigurationError("%s is a required configuration item under [gameserver]" % str(e))
 
@@ -103,7 +104,9 @@ class GameServerHandler:
         if not os.path.exists(self.dll_config_path):
             raise ConfigurationError(
                 "Invalid 'controller_config' specified under [gameserver]: the specified file does not exist")
-
+        if self.platform == 'linux' and not os.path.exists(self.injector_exe):
+            raise ConfigurationError(
+                "Invalid 'injector_exe' specified under [gameserver]: the specified file does not exist")
 
     def wait_until_file_contains_string(self, filename, string, timeout = 0):
         i = 0
@@ -129,7 +132,15 @@ class GameServerHandler:
 
     def start_server_process(self, server):
         external_port = self.ports[server]
-        internal_port = self.ports[f'{server}proxy']
+
+        if self.platform == 'linux':
+            # udpproxy is disabled, so listen directly on the port
+            internal_port = external_port
+        else:
+            # Add 100 to the port, because it's the udpproxy that's actually listening on the port itself
+            # and it forwards traffic to port + 100
+            internal_port = self.ports[f'{server}proxy']
+
         log_filename = os.path.join(self.data_root, 'logs', 'tagameserver%d.log' % external_port)
 
         try:
@@ -139,18 +150,32 @@ class GameServerHandler:
             pass
 
         self.logger.info(f'{server}: starting a new TribesAscend server on port {external_port}...')
-        # Add 100 to the port, because it's the udpproxy that's actually listening on the port itself
-        # and it forwards traffic to port + 100
-        args = [self.exe_path, 'server',
-                '-abslog=%s' % os.path.abspath(log_filename),
-                '-port=%d' % internal_port,
-                '-controlport', str(self.ports['game2launcher'])]
-        if self.dll_config_path is not None:
-            args.extend(['-tamodsconfig', self.dll_config_path])
-        process = sp.Popen(args, cwd=self.working_dir)
-        self.servers[server] = process
-        self.logger.info(f'{server}: started process with pid {process.pid}')
+        
+        if self.platform == 'windows':
+            from .gameserverprocess import GameServerProcess
+            process = GameServerProcess(
+                working_dir=self.working_dir, 
+                abslog=os.path.abspath(log_filename),
+                port=internal_port,
+                control_port=self.ports['game2launcher'],
+                dll_to_inject=self.dll_to_inject,
+                dll_config_path=self.dll_config_path
+            )
+        elif self.platform == 'linux':
+            from .winegameserverprocess import WineGameServerProcess
+            process = WineGameServerProcess(
+                working_dir=self.working_dir,
+                abslog=os.path.abspath(log_filename),
+                port=internal_port,
+                control_port=self.ports['game2launcher'],
+                injector_path=self.injector_exe,
+                dll_to_inject=self.dll_to_inject,
+                dll_config_path=self.dll_config_path
+            )
 
+        self.servers[server] = process
+        process.start()
+        self.logger.info(f'{server}: started process with pid {process.pid}')
         # Check if it doesn't exit right away
         time.sleep(2)
         ret_code = process.poll()
@@ -163,7 +188,7 @@ class GameServerHandler:
             self.logger.warning(f'{server}: timeout waiting for log entry, continuing with injection...')
 
         self.logger.info(f'{server}: injecting game controller DLL into game server...')
-        inject(process.pid, self.dll_to_inject)
+        process.inject()
         self.logger.info(f'{server}: injection done.')
 
         self.watcher_task = gevent_spawn('gameserver process watcher for server %s' % server, self.server_process_watcher, process, server)
@@ -175,18 +200,18 @@ class GameServerHandler:
             process.terminate()
 
     def freeze_server_process(self, server):
-        pid = self.servers[server].pid
-        if not ctypes.windll.kernel32.DebugActiveProcess(pid):
-            self.logger.error(f'{server}: failed to freeze game server process {pid}')
+        process = self.servers[server]
+        if not process.freeze():
+            self.logger.error(f'{server}: failed to freeze game server process {process.pid}')
         else:
-            self.logger.info(f'{server}: game server process {pid} frozen')
+            self.logger.info(f'{server}: game server process {process.pid} frozen')
 
     def unfreeze_server_process(self, server):
-        pid = self.servers[server].pid
-        if not ctypes.windll.kernel32.DebugActiveProcessStop(pid):
-            self.logger.error(f'{server}: failed to unfreeze game server process {pid}')
+        process = self.servers[server]
+        if not process.unfreeze():
+            self.logger.error(f'{server}: failed to unfreeze game server process {process.pid}')
         else:
-            self.logger.info(f'{server}: game server process {pid} unfrozen')
+            self.logger.info(f'{server}: game server process {process.pid} unfrozen')
 
     def terminate_all_servers(self):
         existing_servers = self.servers
@@ -212,8 +237,9 @@ class GameServerHandler:
             self.terminate_all_servers()
 
 
-def handle_game_server(game_server_config, ports, server_handler_queue, incoming_queue, data_root):
+def handle_game_server(game_server_config, shared_config, ports, server_handler_queue, incoming_queue, data_root):
     game_server_handler = GameServerHandler(game_server_config,
+                                            shared_config,
                                             ports,
                                             server_handler_queue,
                                             incoming_queue,
